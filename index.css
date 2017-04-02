@@ -8,15 +8,27 @@ html,body, div {
 }
 
 #button {
-  width: 100px;
-  height: 50px;
-  position: absolute;
-  left: 100px;
-  top: 100px;
+  padding: 15px 35px 15px 35px;
   text-align: center;
-  padding-top: 20px;
-  border: 1px solid red;
+  vertical-align: middle;
+  background-color: #9933FF;
+  color: #fff;
   border-radius: 10px;
   cursor: pointer;
   z-index: 100;
+  font-size: 30px;
+  transition: .3s;
+  font-family: Arial;
+}
+.button-wrapper {
+  border-radius: 10px;
+  position: absolute;
+  left: 50px;
+  top: 50px;
+  padding: 30px;
+  background-color: #333;
+}
+#button:hover {
+  color: #9933FF;
+  background-color: #fff;
 }
