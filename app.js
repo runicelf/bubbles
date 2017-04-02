@@ -9,13 +9,12 @@
     canvas.width = wrapper.clientWidth;
     canvas.height = wrapper.clientHeight;
     button.addEventListener('click', () => {
-      bStore.addBall(new Circle(100, 280));
+      bStore.addBall(new Circle(new Vector(100, 280)));
       bStore.showBall();
     });
 
 
     canvas.addEventListener('mousedown', event => {
-      //console.log(event.pageX, event.pageY, circleExample.cords.y2());
       const ball = bStore.findBall(new Vector(event.pageX, event.pageY));
       if(ball) {
         const onMoveWithBall = onMove.bind(null, ball);
@@ -50,7 +49,6 @@
       this.y = y;
     }
     plus(v) {
-      //const normedV = this.normalize(v);
       return new Vector(this.x + v.x, this.y + v.y);
     }
     minus(v) {
@@ -78,10 +76,11 @@
   }
 
   class Circle {
-    constructor(x, y) {
+    constructor(v) {
       this.rad = this.randomRad();
-      this.vector = new Vector(x, y);
+      this.vector = v;
       this.color = this.randomColor();
+      this.listOfExternalEvents = [];
       this.state = {
         catched : false,
         widthOfSpace: 0
@@ -111,6 +110,9 @@
         y2 : vector.y + this.rad
       }
     }
+    addExternalEvent(e) {
+      this.listOfExternalEvents.push(e);
+    }
     randomColor() {
       const r = Math.floor(Math.random() * (256));
       const g = Math.floor(Math.random() * (256));
@@ -126,14 +128,12 @@
       this.vector.y = y;
       const startTime = performance.now();
       function cbToFrame(color, time) {
-        //if(startTime - time > 15) {
           context.clearRect(0, 0, canvas.width / 2, canvas.height)
           context.beginPath();
           context.arc(this.vector.x, this.vector.y, this.rad, 0, 2*Math.PI, false);
           context.fillStyle = color;
           context.fill();
           context.stroke();
-        //}
       }
       requestAnimationFrame(cbToFrame.bind(this, color));
     }
@@ -148,7 +148,10 @@
           this.state.catched = true;
           this.state.widthOfSpace = canvas.width / 2;
         }
-        if(bStore.findBall(this.vector.plus(insVector.multiply(speed)), this.id)) {
+        if(this.listOfExternalEvents.length > 0) {
+          insVector = this.vector.minus(this.listOfExternalEvents[0]).normalize();
+          this.listOfExternalEvents = [];
+        }else if(bStore.findBall(this.vector.plus(insVector.multiply(speed)), this.id)) {
           insVector = insVector.reverse();
         }
 
@@ -160,8 +163,6 @@
         }
 
         this.vector = this.vector.plus(insVector.multiply(speed));
-
-        //context.clearRect(canvas.width / 2, 0, canvas.width / 2, canvas.height);
         context.beginPath();
         context.arc(this.vector.x, this.vector.y, this.rad, 0, 2*Math.PI, false);
         context.fillStyle = this.color;
@@ -170,31 +171,6 @@
         requestAnimationFrame(cbToFrame.bind(this, insVector));
       }
       requestAnimationFrame(cbToFrame.bind(this, vector));
-      /*
-      const cbToFrame = (x = this.x, y = this.y, time) => {
-        let speedPlus = 0;
-        this.x = x;
-        this.y = y;
-        if(this.cords.y2() === canvas.height || this.cords.y1() === 0) {
-          speed *= -1;
-        }
-        if(this.cords.y2() + speed > canvas.height) {
-          speedPlus = this.cords.y2() + speed - canvas.height;
-          console.log(this.cords.y2() + speed , canvas.height)
-        }
-        if(this.cords.y1() + speed < 0) {
-          speedPlus = this.cords.y1() + speed;
-        }
-        context.clearRect(0, 0, canvas.width, canvas.height)
-        context.beginPath();
-        context.arc(this.x, this.y, this.rad, 0, 2*Math.PI, false);
-        context.fillStyle = this.color;
-        context.fill();
-        context.stroke();
-       requestAnimationFrame(cbToFrame.bind(this, this.x , this.y + speed - speedPlus));
-      }
-      */
-      //requestAnimationFrame(cbToFrame.bind(this, this.x , this.y + speed));
     }
     isYou(v) {
       if(v.x >= this.cords.x1() && v.x <= this.cords.x2() && v.y >= this.cords.y1() && v.y <= this.cords.y2()) {
@@ -212,8 +188,28 @@
     addBall(b) {
       this.store.push(b);
     }
+    findById(id) {
+      const ball = this.store.filter(b => b.id === id);
+      if(ball.length > 0) {
+        return ball[0];
+      }else {
+        console.log('errr');
+        return false;
+      }
+    }
     findBall(v, id) {
-      const ball = id !== 'undefined' ? this.store.filter(b => b.id !== id && b.isYou(v)) : this.store.filter(b => b.isYou(v));
+      let ball;
+      if (typeof id !== 'undefined') {
+        ball = this.store.filter(b => b.id !== id && b.isYou(v));
+        if(ball.length > 0) {
+          const externalEvent = this.findById(id).vector;
+          ball[0].addExternalEvent(externalEvent);
+          return ball[0];
+        }
+        return  false;
+      }else {
+        ball = this.store.filter(b => b.isYou(v));
+      }
       if(ball.length > 0) {
         return ball[0];
       }
@@ -230,7 +226,4 @@
     requestAnimationFrame(clearScreen);
   }
   requestAnimationFrame(clearScreen);
-  //circleExample.render();
-  //context.re
-  //circleExample.fly();
 })();
