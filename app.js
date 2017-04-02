@@ -16,12 +16,12 @@
 
     canvas.addEventListener('mousedown', event => {
       //console.log(event.pageX, event.pageY, circleExample.cords.y2());
-      const ball = bStore.findBall(event.pageX, event.pageY);
+      const ball = bStore.findBall(new Vector(event.pageX, event.pageY));
       if(ball) {
         const onMoveWithBall = onMove.bind(null, ball);
         const onUpWithBall = onUp.bind(null, ball);
         let mouseCords = null;
-        let vector;
+        let vector = new Vector(0.5, 0.5);
         function onMove(ball, event) {
           if(mouseCords === null) {
             mouseCords = new Vector(event.pageX, event.pageY);
@@ -34,7 +34,7 @@
         function onUp(ball, event) {
           canvas.removeEventListener('mousemove',onMoveWithBall);
           canvas.removeEventListener('mouseup',onUpWithBall);
-          ball.fly(vector, vector.length());
+          ball.fly(vector.normalize(), vector.length());
         }
         canvas.addEventListener('mousemove', onMoveWithBall);
         canvas.addEventListener('mouseup', onUpWithBall);
@@ -59,6 +59,9 @@
     multiply(n) {
       return new Vector(this.x * n, this.y * n);
     }
+    reverse() {
+      return new Vector(this.x * -1, this.y * -1);
+    }
     reverseX() {
       return new Vector(this.x * -1, this.y);
     }
@@ -68,9 +71,9 @@
     length() {
       return Math.sqrt(this.x * this.x + this.y * this.y);
     }
-    normalize(v) {
-      const length = this.length(v)
-      return new Vector(v.x * 1/length, v.y * 1/length);
+    normalize() {
+      const length = this.length()
+      return new Vector(this.x * 1/length, this.y * 1/length);
     }
   }
 
@@ -79,11 +82,33 @@
       this.rad = this.randomRad();
       this.vector = new Vector(x, y);
       this.color = this.randomColor();
+      this.state = {
+        catched : false,
+        widthOfSpace: 0
+      };
       this.cords = {
         x1 : () => this.vector.x - this.rad,
         y1 : () => this.vector.y - this.rad,
         x2 : () => this.vector.x + this.rad,
         y2 : () => this.vector.y + this.rad
+      };
+      this.id = Circle.getId();
+
+    }
+    static getId() {
+      let counter = 0;
+      Circle.getId = () => {
+        counter++;
+        return counter;
+      };
+      return 0;
+    };
+    findCords(vector) {
+      return {
+        x1 : vector.x - this.rad,
+        y1 : vector.y - this.rad,
+        x2 : vector.x + this.rad,
+        y2 : vector.y + this.rad
       }
     }
     randomColor() {
@@ -113,19 +138,29 @@
       requestAnimationFrame(cbToFrame.bind(this, color));
     }
     fly(vector, speed = 5) {
-      //console.log(canvas.width, canvas.height);
       const cbToFrame = (vector, time) => {
-        let insVector = vector.normalize(vector);
-        const theyVector = vector.normalize(vector).multiply(speed);
-        const newVector = this.vector.plus(theyVector);
-        this.vector = newVector;
-        //this.vector().multiply(speed);
-        if(this.cords.y2() > canvas.height || this.cords.y1() < 0) {
+        let insVector = vector;
+
+        const theyVector = vector.multiply(speed);
+
+        const newCords = this.findCords(this.vector.plus(theyVector));
+        if(newCords.x1 > canvas.width / 2) {
+          this.state.catched = true;
+          this.state.widthOfSpace = canvas.width / 2;
+        }
+        if(bStore.findBall(this.vector.plus(insVector.multiply(speed)), this.id)) {
+          insVector = insVector.reverse();
+        }
+
+        if(newCords.y2 > canvas.height || newCords.y1 < 0) {
           insVector = insVector.reverseY();
         }
-        if(this.cords.x2() > canvas.width || this.cords.x1() < canvas.width / 2) {
+        if(newCords.x2 > canvas.width || newCords.x1 < this.state.widthOfSpace) {
           insVector = insVector.reverseX();
         }
+
+        this.vector = this.vector.plus(insVector.multiply(speed));
+
         //context.clearRect(canvas.width / 2, 0, canvas.width / 2, canvas.height);
         context.beginPath();
         context.arc(this.vector.x, this.vector.y, this.rad, 0, 2*Math.PI, false);
@@ -161,8 +196,8 @@
       */
       //requestAnimationFrame(cbToFrame.bind(this, this.x , this.y + speed));
     }
-    isYou(xCord, yCord) {
-      if(xCord >= this.cords.x1() && xCord <= this.cords.x2() && yCord >= this.cords.y1() && yCord <= this.cords.y2()) {
+    isYou(v) {
+      if(v.x >= this.cords.x1() && v.x <= this.cords.x2() && v.y >= this.cords.y1() && v.y <= this.cords.y2()) {
         return true;
       }else {
         return false;
@@ -177,8 +212,8 @@
     addBall(b) {
       this.store.push(b);
     }
-    findBall(x, y) {
-      const ball = this.store.filter(b => b.isYou(x, y));
+    findBall(v, id) {
+      const ball = id !== 'undefined' ? this.store.filter(b => b.id !== id && b.isYou(v)) : this.store.filter(b => b.isYou(v));
       if(ball.length > 0) {
         return ball[0];
       }
