@@ -10,7 +10,6 @@
     canvas.height = wrapper.clientHeight;
     button.addEventListener('click', () => {
       bStore.addBall(new Circle(new Vector(100, 280)));
-      bStore.showBall();
     });
 
 
@@ -33,7 +32,9 @@
         function onUp(ball, event) {
           canvas.removeEventListener('mousemove',onMoveWithBall);
           canvas.removeEventListener('mouseup',onUpWithBall);
-          ball.fly(vector.normalize(), vector.length());
+          if(!ball.onFly()) {
+            ball.fly(vector.normalize(), vector.length());
+          }
         }
         canvas.addEventListener('mousemove', onMoveWithBall);
         canvas.addEventListener('mouseup', onUpWithBall);
@@ -83,7 +84,8 @@
       this.listOfExternalEvents = [];
       this.state = {
         catched : false,
-        widthOfSpace: 0
+        widthOfSpace: 0,
+        onFly: false
       };
       this.cords = {
         x1 : () => this.vector.x - this.rad,
@@ -123,6 +125,12 @@
     randomRad() {
       return Math.floor(Math.random() * 40 + 10);
     }
+    onFly() {
+      if(this.state.onFly) {
+        return true;
+      }
+      return false;
+    }
     render(x = this.vector.x, y = this.vector.y, color = this.color) {
       this.vector.x = x;
       this.vector.y = y;
@@ -131,6 +139,7 @@
           context.clearRect(0, 0, canvas.width / 2, canvas.height)
           context.beginPath();
           context.arc(this.vector.x, this.vector.y, this.rad, 0, 2*Math.PI, false);
+          context.closePath();
           context.fillStyle = color;
           context.fill();
           context.stroke();
@@ -138,6 +147,7 @@
       requestAnimationFrame(cbToFrame.bind(this, color));
     }
     fly(vector, speed = 5) {
+      this.state.onFly = true;
       const cbToFrame = (vector, time) => {
         let insVector = vector;
 
@@ -147,6 +157,15 @@
         if(newCords.x1 > canvas.width / 2) {
           this.state.catched = true;
           this.state.widthOfSpace = canvas.width / 2;
+        }else {
+          context.clearRect(this.cords.x1() - 1, this.cords.y1() - 1, this.rad * 2 + 2, this.rad * 2 + 2);
+          /*
+          context.globalCompositeOperation = 'destination-out';
+          context.beginPath();
+          context.arc(this.cords.x1(), this.cords.y1(), this.rad, 0, 2*Math.PI, true);
+          context.closePath();
+          context.fill();
+          */
         }
         if(this.listOfExternalEvents.length > 0) {
           insVector = this.vector.minus(this.listOfExternalEvents[0]).normalize();
@@ -162,9 +181,12 @@
           insVector = insVector.reverseX();
         }
 
+
+        //////////////
         this.vector = this.vector.plus(insVector.multiply(speed));
         context.beginPath();
         context.arc(this.vector.x, this.vector.y, this.rad, 0, 2*Math.PI, false);
+        context.closePath();
         context.fillStyle = this.color;
         context.fill();
         context.stroke();
@@ -186,7 +208,10 @@
       this.store = []
     }
     addBall(b) {
-      this.store.push(b);
+      if(this.store.length === 0 || this.store[this.store.length - 1].onFly()) {
+        this.store.push(b);
+        this.showBall();
+      }
     }
     findById(id) {
       const ball = this.store.filter(b => b.id === id);
@@ -222,7 +247,7 @@
 
   const bStore = new BallStore();
   function clearScreen(time) {
-    context.clearRect(canvas.width / 2, 0, canvas.width / 2, canvas.height);
+    context.clearRect(canvas.width / 2 - 100, 0, canvas.width / 2 + 100, canvas.height);
     requestAnimationFrame(clearScreen);
   }
   requestAnimationFrame(clearScreen);
