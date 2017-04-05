@@ -4,45 +4,39 @@
     context = canvas.getContext('2d'),
     button = document.getElementById('button');
 
-  window.addEventListener('resize', resizeCanvas, false);
-  function resizeCanvas() {
-    canvas.width = wrapper.clientWidth;
-    canvas.height = wrapper.clientHeight;
-    button.addEventListener('click', () => {
-      bStore.addBall(new Circle(new Vector(100, 280)));
-    });
+  canvas.width = wrapper.clientWidth;
+  canvas.height = wrapper.clientHeight;
+  button.addEventListener('click', () => {
+    bStore.addBall(new Circle(new Vector(100, 280)));
+  });
 
-    canvas.addEventListener('mousedown', event => {
-      const ball = bStore.findBall(new Vector(event.pageX, event.pageY));
-      if(ball) {
-        const onMoveWithBall = onMove.bind(null, ball),
-          onUpWithBall = onUp.bind(null, ball);
-        let mouseCords = null,
-          vector = new Vector(0.5, 0.5);
-        function onMove(ball, event) {
-          if(mouseCords === null) {
-            mouseCords = new Vector(event.pageX, event.pageY);
-          }else {
-            vector = new Vector(event.pageX, event.pageY).minus(mouseCords);
-            mouseCords = new Vector(event.pageX, event.pageY);
-          }
-          ball.render(new Vector(event.pageX, event.pageY));
+  canvas.addEventListener('mousedown', event => {
+    const ball = bStore.findBall(new Vector(event.pageX, event.pageY));
+    if(ball) {
+      const onMoveWithBall = onMove.bind(null, ball),
+        onUpWithBall = onUp.bind(null, ball);
+      let mouseCords = null,
+        vector = new Vector(0.5, 0.5);
+      function onMove(ball, event) {
+        if(mouseCords === null) {
+          mouseCords = new Vector(event.pageX, event.pageY);
+        }else {
+          vector = new Vector(event.pageX, event.pageY).minus(mouseCords);
+          mouseCords = new Vector(event.pageX, event.pageY);
         }
-        function onUp(ball, event) {
-          canvas.removeEventListener('mousemove',onMoveWithBall);
-          canvas.removeEventListener('mouseup',onUpWithBall);
-          if(!ball.onFly()) {
-            ball.fly(vector.normalize(), vector.length());
-          }
-        }
-        canvas.addEventListener('mousemove', onMoveWithBall);
-        canvas.addEventListener('mouseup', onUpWithBall);
+        ball.render(new Vector(event.pageX, event.pageY));
       }
-
-      return;
-    });
-  }
-  resizeCanvas();
+      function onUp(ball, event) {
+        canvas.removeEventListener('mousemove',onMoveWithBall);
+        canvas.removeEventListener('mouseup',onUpWithBall);
+        if(!ball.onFly()) {
+          ball.fly(vector.normalize(), vector.length());
+        }
+      }
+      canvas.addEventListener('mousemove', onMoveWithBall);
+      canvas.addEventListener('mouseup', onUpWithBall);
+    }
+  });
 
   class Vector {
     constructor(x, y) {
@@ -209,7 +203,6 @@
       if(ball.length > 0) {
         return ball[0];
       }else {
-        console.log('errr');
         return false;
       }
     }
@@ -236,10 +229,10 @@
     }
   }
 
-  const bStore = new BallStore();
   function clearScreen(time) {
     context.clearRect(canvas.width / 2 - 100, 0, canvas.width / 2 + 100, canvas.height);
     requestAnimationFrame(clearScreen);
   }
+  const bStore = new BallStore();
   requestAnimationFrame(clearScreen);
 })();
